@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 /* ═══════════════════════════════
-   VARIABLES & CSS (Same as before)
+   VARIABLES & CSS
 ═══════════════════════════════ */
 :root{
   --bg:       #F7F8FC;
@@ -667,7 +667,7 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border);position:relative;z-i
         <div><label class="albl">Tech Stack (comma separated)</label><input class="ainp" id="np-tags" placeholder="React, Node.js"/></div>
         <div><label class="albl">Live / GitHub Link</label><input class="ainp" id="np-link" placeholder="https://…"/></div>
         <div class="full"><label class="albl">Screenshot</label>
-          <div class="img-zone" onclick="document.getElementById('np-img').click()"><input type="file" id="np-img" accept="image/*" style="display:none" onchange="prvI(this,'np-prv','np-clr')"/><p>📁 Upload screenshot</p><small>JPG, PNG — Firebase Storage</small></div>
+          <div class="img-zone" onclick="document.getElementById('np-img').click()"><input type="file" id="np-img" accept="image/*" style="display:none" onchange="prvI(this,'np-prv','np-clr')"/><p>📁 Upload screenshot</p><small>JPG, PNG — ImgBB Storage</small></div>
           <img id="np-prv" class="img-prev" alt=""/><button class="img-clr" id="np-clr" onclick="clrI('np-img','np-prv','np-clr')">✕ Remove</button>
         </div>
         <div class="full chk-row"><input type="checkbox" id="np-feat"/><label for="np-feat">Mark as Featured</label></div>
@@ -687,7 +687,7 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border);position:relative;z-i
         <div><label class="albl">Icon (emoji)</label><input class="ainp" id="na-icon" placeholder="🏆"/></div>
         <div><label class="albl">Link</label><input class="ainp" id="na-lnk" placeholder="https://…"/></div>
         <div class="full"><label class="albl">Images</label>
-          <div class="img-zone" onclick="document.getElementById('na-imgs').click()"><input type="file" id="na-imgs" accept="image/*" multiple style="display:none" onchange="handleMulti(this,'na-mprev','naImgs')"/><p>📁 Select multiple images</p><small>Will be uploaded to Firebase</small></div>
+          <div class="img-zone" onclick="document.getElementById('na-imgs').click()"><input type="file" id="na-imgs" accept="image/*" multiple style="display:none" onchange="handleMulti(this,'na-mprev','naImgs')"/><p>📁 Select multiple images</p><small>Will be uploaded to ImgBB</small></div>
           <div class="multi-prev" id="na-mprev"></div>
         </div>
         <div class="full"><button class="btn-a" id="btn-add-ach" onclick="addAch()">+ Add Achievement</button></div>
@@ -703,7 +703,7 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border);position:relative;z-i
         <input type="file" id="gal-inp" accept="image/*" multiple style="display:none" onchange="handleGal(this)"/>
         <p style="font-size:1.8rem;margin-bottom:.5rem;">📸</p>
         <p id="gal-upload-text">Click to upload — select as many as you like</p>
-        <small>Uploaded directly to Firebase Storage</small>
+        <small>Uploaded directly to ImgBB</small>
       </div>
       <div class="adiv"></div>
       <p class="asec">Gallery <span id="gal-cnt" style="color:var(--ink3)"></span></p>
@@ -782,7 +782,6 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border);position:relative;z-i
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <script>
 // ═══ FIREBASE SETUP ═══
@@ -790,13 +789,12 @@ const firebaseConfig = {
   apiKey: "AIzaSyC9Tk91lGBJoZvHxhqO9YtU0dZ6vV_Yh7s",
   authDomain: "asif-portfolio-a2424.firebaseapp.com",
   projectId: "asif-portfolio-a2424",
-  storageBucket: "asif-portfolio-a2424.firebasestorage.app",
+  storageBucket: "asif-portfolio-a2424.firebasestorage.app", // Now unused
   messagingSenderId: "59335903140",
   appId: "1:59335903140:web:4ceeefd57d68949ad62331"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // ═══ LOCAL STATE ═══
 let localProj = [];
@@ -839,18 +837,48 @@ async function initData() {
   setTimeout(typeRole, 1000);
 }
 
-// ═══ UPLOAD HELPERS ═══
+// ═══ UPLOAD HELPERS (ImgBB) ═══
+const IMGBB_API_KEY = "0fa2f57e954eacb6dc5377d73d27191b";
+
 async function uploadFileToStorage(file, folder) {
   if(!file) return '';
-  const ref = storage.ref(`portfolio/${folder}/` + Date.now() + '_' + file.name);
-  await ref.put(file);
-  return await ref.getDownloadURL();
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  try {
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    return data.data.url; // ImgBB theke direct live link pabe
+  } catch(err) {
+    console.error("Image Upload Error:", err);
+    alert("Image upload failed! Please check console.");
+    return '';
+  }
 }
+
 async function uploadDataUrlToStorage(dataUrl, folder) {
-  if(!dataUrl || dataUrl.startsWith('http')) return dataUrl; // already a link
-  const ref = storage.ref(`portfolio/${folder}/` + Date.now() + '_' + Math.floor(Math.random()*1000));
-  await ref.putString(dataUrl, 'data_url');
-  return await ref.getDownloadURL();
+  if(!dataUrl || dataUrl.startsWith('http')) return dataUrl; 
+  
+  // Base64 theke asol data tuku alada kora
+  const base64Data = dataUrl.split(',')[1];
+  const formData = new FormData();
+  formData.append('image', base64Data);
+  
+  try {
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    return data.data.url;
+  } catch(err) {
+    console.error("Image Upload Error:", err);
+    alert("Image upload failed! Please check console.");
+    return '';
+  }
 }
 
 let naImgs=[],eaImgs=[],ppData='',epImgData='';
